@@ -21,6 +21,7 @@ public class ResponseFilter : MemoryStream, IRequiresSessionState
     string website_domain = MOBModule.GetConf("mob_website_domain", "");
     bool cache_ssl = Boolean.Parse(MOBModule.GetConf("mob_cache_ssl", "false"));
     string charset = MOBModule.GetConf("mob_charset", "");
+    int timeout = Int32.Parse(MOBModule.GetConf("mob_timeout", "100"));//100 seconds is the .net ( 100,000 milliseconds)
     
     bool compressInput =  Boolean.Parse(MOBModule.GetConf("mob_compressInput", "true"));
     bool compressOutput = Boolean.Parse(MOBModule.GetConf("mob_compressOutput", "false"));
@@ -41,7 +42,7 @@ public class ResponseFilter : MemoryStream, IRequiresSessionState
     private volatile bool _isClosing;
     private volatile bool _isClosed;
 
-    string mob_info;
+    string mob_info ="";
 
     
 
@@ -149,7 +150,11 @@ public class ResponseFilter : MemoryStream, IRequiresSessionState
             //mob_info += "\n<!-- \n user_agent  " + MOBModule.MOB_Get_UA(_httpApp) + "\n -->";
             string requested_with = _httpApp.Context.Request.Headers["X-Requested-With"];
             string requested_microsoft_ajax = _httpApp.Context.Request.Headers["X-MicrosoftAjax"];
-            if (String.Equals(requested_with, "xmlhttprequest", StringComparison.OrdinalIgnoreCase) || (requested_microsoft_ajax != null && requested_microsoft_ajax.Length > 0))
+			string requested_zuz_ajax = _httpApp.Context.Request.Headers["X-Zuznow-Ajax"];
+			
+            if (String.Equals(requested_with, "xmlhttprequest", StringComparison.OrdinalIgnoreCase) 
+				|| (requested_microsoft_ajax != null && requested_microsoft_ajax.Length > 0)
+				||(requested_zuz_ajax != null && String.Equals(requested_zuz_ajax, "true", StringComparison.OrdinalIgnoreCase )))
             {
                 reqparm.Add("ajax", "true");
                 is_ajax = true;
@@ -247,6 +252,7 @@ public class ResponseFilter : MemoryStream, IRequiresSessionState
                     httpRequest.Method = "POST";
                     httpRequest.ContentType = "application/x-www-form-urlencoded";
                     httpRequest.AllowAutoRedirect = false;
+                    httpRequest.Timeout = timeout*1000;
 
                     httpRequest.ContentLength = bytedata.Length;
                     Stream requestStream = httpRequest.GetRequestStream();
